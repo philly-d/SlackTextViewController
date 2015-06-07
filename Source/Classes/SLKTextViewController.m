@@ -1424,6 +1424,12 @@ NSInteger const SLKAlertViewClearTextTag = 1534347677; // absolute hash of 'SLKT
     if (text.length == 0) {
         return [self cancelAutoCompletion];
     }
+
+    if (self.autoCompleteIsPersisting) {
+        _foundPrefix = @"";
+        _foundPrefixRange = self.textView.selectedRange;
+        return [self handleProcessedWord:@"" range:self.textView.selectedRange];
+    }
     
     NSRange range;
     NSString *word = [self.textView slk_wordAtCaretRange:&range];
@@ -1447,9 +1453,12 @@ NSInteger const SLKAlertViewClearTextTag = 1534347677; // absolute hash of 'SLKT
 
 - (void)slk_handleProcessedWord:(NSString *)word range:(NSRange)range
 {
-    // Cancel auto-completion if the cursor is placed before the prefix
-    if (self.textView.selectedRange.location <= self.foundPrefixRange.location) {
-        return [self cancelAutoCompletion];
+
+    // Cancel autocompletion if the cursor is placed before the prefix
+    if (self.textView.selectedRange.location <= _foundPrefixRange.location) {
+        if (!self.autoCompleteIsPersisting) {
+            return [self cancelAutoCompletion];
+        }
     }
     
     if (self.foundPrefix.length > 0) {
@@ -1461,17 +1470,30 @@ NSInteger const SLKAlertViewClearTextTag = 1534347677; // absolute hash of 'SLKT
             // Removes the found prefix
             _foundWord = [word substringFromIndex:self.foundPrefix.length];
             
-            // If the prefix is still contained in the word, cancels
-            if ([self.foundWord rangeOfString:self.foundPrefix].location != NSNotFound) {
-                return [self cancelAutoCompletion];
-            }
+
+            // TODO:
+            // Flag for allowing registered prefix within an autocomplete term.
+            // For us, this is allowing the "@" prefix within words to support
+            // email addresses (handle@domain).
+            // // If the prefix is still contained in the word, cancels
+            // if ([self.foundWord rangeOfString:self.foundPrefix].location != NSNotFound) {
+            //     return [self cancelAutoCompletion];
+            // }
         }
         else {
             return [self cancelAutoCompletion];
         }
     }
     else {
-        return [self cancelAutoCompletion];
+        if (self.autoCompleteIsPersisting) {
+            // Allow empty word initially, if autocomplete is persisting
+            // after a found word.
+            _foundWord = word;
+            _autoCompleteIsPersisting = NO;
+        }
+        else {
+            return [self cancelAutoCompletion];
+        }
     }
     
     [self slk_showAutoCompletionView:[self canShowAutoCompletion]];
@@ -1499,6 +1521,13 @@ NSInteger const SLKAlertViewClearTextTag = 1534347677; // absolute hash of 'SLKT
 
 - (void)acceptAutoCompletionWithString:(NSString *)string keepPrefix:(BOOL)keepPrefix
 {
+    if (self.autoCompleteShouldPersist) {
+        // Set persistence flag immediately after
+        // accepting an autocomplete term to allow
+        // susbsequent selections on an empty term.
+        _autoCompleteIsPersisting = YES;
+    }
+
     if (string.length == 0) {
         return;
     }
@@ -1520,7 +1549,9 @@ NSInteger const SLKAlertViewClearTextTag = 1534347677; // absolute hash of 'SLKT
     
     textView.selectedRange = NSMakeRange(insertionRange.location, 0);
     
-    [self cancelAutoCompletion];
+    if (!self.autoCompleteShouldPersist) {
+        [self cancelAutoCompletion];
+    }
     
     [textView slk_scrollToCaretPositonAnimated:NO];
 }

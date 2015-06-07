@@ -301,6 +301,13 @@ NS_CLASS_AVAILABLE_IOS(7_0) @interface SLKTextViewController : UIViewController 
 /// @name Text Edition
 ///------------------------------------------------
 
+/** Should the autocomplete persist after a selection? */
+@property (nonatomic) BOOL autoCompleteShouldPersist;
+
+/** Flag to show autocomplete view is persisting. Allows
+	an empty string to pass for an autocomplete search term */
+@property (nonatomic, readonly) BOOL autoCompleteIsPersisting;
+
 /** YES if the text editing mode is active. */
 @property (nonatomic, readonly, getter = isEditing) BOOL editing;
 
