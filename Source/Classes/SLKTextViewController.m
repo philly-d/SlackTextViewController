@@ -1431,20 +1431,46 @@ NSInteger const SLKAlertViewClearTextTag = 1534347677; // absolute hash of 'SLKT
         return [self handleProcessedWord:@"" range:self.textView.selectedRange];
     }
     
-    NSRange range;
-    NSString *word = [self.textView slk_wordAtCaretRange:&range];
+    NSRange range = NSMakeRange(0.0, 0.0);
+    NSString *word = nil; //[self.textView slk_wordAtCaretRange:&range];
+    NSRange selectedRange = self.textView.selectedRange;
+    NSInteger location = selectedRange.location;
     
-    [self slk_invalidateAutoCompletion];
-    
-    if (word.length > 0) {
-        NSString *prefix = [word substringWithRange:NSMakeRange(0, 1)];
+    for (NSString *prefix in self.registeredPrefixes) {
         
-        if ([self.registeredPrefixes containsObject:prefix]) {
-            // Captures the detected symbol prefix
-            _foundPrefix = prefix;
-            
-            // Used later for replacing the detected range with a new string alias returned in -acceptAutoCompletionWithString:
-            _foundPrefixRange = NSMakeRange(range.location, prefix.length);
+        // Find last occurrence of prefix before cursor position
+        NSString *stringUpToCursor = [text substringToIndex:location];
+        NSUInteger length = [stringUpToCursor length];
+        NSRange searchRange = NSMakeRange(0, length);
+        while(searchRange.location != NSNotFound)
+        {
+            searchRange = [stringUpToCursor rangeOfString:prefix options:NSBackwardsSearch range:searchRange];
+            if(searchRange.location != NSNotFound)
+            {
+                // Prefix was found
+                if (searchRange.location > 0) {
+                    // Determine that prefix is at beginning of input or is preceded by whitespace
+                    unichar charBeforePrefix = [stringUpToCursor characterAtIndex:searchRange.location-1];
+                    if (![[NSCharacterSet whitespaceAndNewlineCharacterSet] characterIsMember:charBeforePrefix]) {
+                        // Keep searching if the prefix is in the middle of a word
+                        searchRange = NSMakeRange(0, searchRange.location);
+                        continue;
+                    }
+                }
+                
+                // Get word for autocomplete search by getting range of string
+                // from prefix to the cursor
+                word = [stringUpToCursor substringFromIndex:searchRange.location];
+                range = NSMakeRange(searchRange.location, word.length);
+                
+                // Captures the detected symbol prefix
+                _foundPrefix = prefix;
+                
+                // Used later for replacing the detected range with a new string alias returned in -acceptAutoCompletionWithString:
+                _foundPrefixRange = NSMakeRange(range.location, prefix.length);
+                
+                break;
+            }
         }
     }
     
