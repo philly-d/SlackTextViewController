@@ -296,6 +296,13 @@ NS_CLASS_AVAILABLE_IOS(7_0) @interface SLKTextViewController : UIViewController 
 /// @name Text Auto-Completion
 ///------------------------------------------------
 
+/** Should the autocomplete persist after a selection? */
+@property (nonatomic) BOOL autoCompleteShouldPersist;
+
+/** Flag to show autocomplete view is persisting. Allows
+  an empty string to pass for an autocomplete search term */
+@property (nonatomic, readonly) BOOL autoCompleteIsPersisting;
+
 /** The table view used to display autocompletion results. */
 @property (nonatomic, readonly) UITableView *autoCompletionView;
 
@@ -358,6 +365,12 @@ NS_CLASS_AVAILABLE_IOS(7_0) @interface SLKTextViewController : UIViewController 
  */
 - (void)acceptAutoCompletionWithString:(NSString *)string;
 
+/**
+  Accepts the autocompletion, replacing the detected word with a new string, and optionally replacing the prefix too.
+  @param string The string to be used for replacing autocompletion placeholders.
+  @param keepPrefix YES if the prefix shouldn't be replaced.
+*/
+- (void)acceptAutoCompletionWithString:(NSString *)string keepPrefix:(BOOL)keepPrefix;
 
 ///------------------------------------------------
 /// @name Text Caching
