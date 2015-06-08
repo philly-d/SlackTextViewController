@@ -466,25 +466,26 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
 
 - (CGFloat)appropriateBottomMarginToWindow
 {
-    UIWindow *window = [UIApplication sharedApplication].keyWindow;
-    
-    CGRect windowFrame = [window convertRect:window.frame fromView:self.view];
-    windowFrame.origin = CGPointZero;
-    
-    CGRect viewRect = [window convertRect:self.view.frame fromView:nil];
-    
-    CGFloat bottomWindow = CGRectGetMaxY(windowFrame);
-    CGFloat bottomView = CGRectGetMaxY(viewRect);
-    
-    // Retrieve the status bar's height when the in-call status bar is displayed
-    if (CGRectGetHeight([UIApplication sharedApplication].statusBarFrame) > 20.0) {
-        bottomView += CGRectGetHeight([UIApplication sharedApplication].statusBarFrame)/2.0;
-    }
-    
-    CGFloat margin = bottomWindow - bottomView;
-    
-    // Do NOT consider a status bar height gap
-    return (margin > 20) ? margin : 0.0;
+    return 0.0;
+    //    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    //
+    //    CGRect windowFrame = [window convertRect:window.frame fromView:self.view];
+    //    windowFrame.origin = CGPointZero;
+    //
+    //    CGRect viewRect = [window convertRect:self.view.frame fromView:nil];
+    //
+    //    CGFloat bottomWindow = CGRectGetMaxY(windowFrame);
+    //    CGFloat bottomView = CGRectGetMaxY(viewRect);
+    //
+    //    // Retrieve the status bar's height when the in-call status bar is displayed
+    //    if (CGRectGetHeight([UIApplication sharedApplication].statusBarFrame) > 20.0) {
+    //        bottomView += CGRectGetHeight([UIApplication sharedApplication].statusBarFrame)/2.0;
+    //    }
+    //
+    //    CGFloat margin = bottomWindow - bottomView;
+    //
+    //    // Do NOT consider a status bar height gap
+    //    return (margin > 20) ? margin : 0.0;
 }
 
 - (NSString *)appropriateKeyboardNotificationName:(NSNotification *)notification
@@ -1518,9 +1519,9 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
     if ((self.edgesForExtendedLayout & UIRectEdgeTop) > 0) {
         
         // On iOS7, the status bar isn't automatically hidden on landscape orientation
-        if (SLK_IS_IPHONE && SLK_IS_LANDSCAPE && !SLK_IS_IOS8_AND_HIGHER) {
-            tableHeight -= CGRectGetHeight([UIApplication sharedApplication].statusBarFrame);
-        }
+        //        if (SLK_IS_IPHONE && SLK_IS_LANDSCAPE && !SLK_IS_IOS8_AND_HIGHER) {
+        //            tableHeight -= CGRectGetHeight([UIApplication sharedApplication].statusBarFrame);
+        //        }
         
         tableHeight -= CGRectGetHeight(self.navigationController.navigationBar.frame);
     }
