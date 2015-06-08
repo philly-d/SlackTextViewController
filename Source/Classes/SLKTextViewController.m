@@ -1338,20 +1338,52 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
         return [self cancelAutoCompletion];
     }
     
-    NSRange range;
-    NSString *word = [self.textView slk_wordAtCaretRange:&range];
+    if (self.autoCompleteIsPersisting) {
+        _foundPrefix = @"";
+        _foundPrefixRange = self.textView.selectedRange;
+        return [self handleProcessedWord:@"" range:self.textView.selectedRange];
+    }
     
-    for (NSString *sign in self.registeredPrefixes) {
+    NSRange range = NSMakeRange(0.0, 0.0);
+    NSString *word = nil; //[self.textView slk_wordAtCaretRange:&range];
+    NSRange selectedRange = self.textView.selectedRange;
+    NSInteger location = selectedRange.location;
+    
+    for (NSString *prefix in self.registeredPrefixes) {
         
-        NSRange keyRange = [word rangeOfString:sign];
-        
-        if (keyRange.location == 0 || (keyRange.length >= 1)) {
-            
-            // Captures the detected symbol prefix
-            _foundPrefix = sign;
-            
-            // Used later for replacing the detected range with a new string alias returned in -acceptAutoCompletionWithString:
-            _foundPrefixRange = NSMakeRange(range.location, sign.length);
+        // Find last occurrence of prefix before cursor position
+        NSString *stringUpToCursor = [text substringToIndex:location];
+        NSUInteger length = [stringUpToCursor length];
+        NSRange searchRange = NSMakeRange(0, length);
+        while(searchRange.location != NSNotFound)
+        {
+            searchRange = [stringUpToCursor rangeOfString:prefix options:NSBackwardsSearch range:searchRange];
+            if(searchRange.location != NSNotFound)
+            {
+                // Prefix was found
+                if (searchRange.location > 0) {
+                    // Determine that prefix is at beginning of input or is preceded by whitespace
+                    unichar charBeforePrefix = [stringUpToCursor characterAtIndex:searchRange.location-1];
+                    if (![[NSCharacterSet whitespaceAndNewlineCharacterSet] characterIsMember:charBeforePrefix]) {
+                        // Keep searching if the prefix is in the middle of a word
+                        searchRange = NSMakeRange(0, searchRange.location);
+                        continue;
+                    }
+                }
+                
+                // Get word for autocomplete search by getting range of string
+                // from prefix to the cursor
+                word = [stringUpToCursor substringFromIndex:searchRange.location];
+                range = NSMakeRange(searchRange.location, word.length);
+                
+                // Captures the detected symbol prefix
+                _foundPrefix = prefix;
+                
+                // Used later for replacing the detected range with a new string alias returned in -acceptAutoCompletionWithString:
+                _foundPrefixRange = NSMakeRange(range.location, prefix.length);
+                
+                break;
+            }
         }
     }
     
@@ -1361,8 +1393,10 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
 - (void)handleProcessedWord:(NSString *)word range:(NSRange)range
 {
     // Cancel autocompletion if the cursor is placed before the prefix
-    if (self.textView.selectedRange.location <= _foundPrefixRange.location) {
-        return [self cancelAutoCompletion];
+    if (self.textView.selectedRange.location <= self.foundPrefixRange.location) {
+        if (!self.autoCompleteIsPersisting) {
+            return [self cancelAutoCompletion];
+        }
     }
     
     if (self.foundPrefix.length > 0) {
@@ -1371,20 +1405,26 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
         }
         
         if (word.length > 0) {
-            // Removes the first character, containing the symbol prefix
-            _foundWord = [word substringFromIndex:1];
+            // Removes the found prefix
+            _foundWord = [word substringFromIndex:self.foundPrefix.length];
             
-            // If the prefix is still contained in the word, cancels
-            if ([self.foundWord rangeOfString:self.foundPrefix].location != NSNotFound) {
-                return [self cancelAutoCompletion];
-            }
+            //            // If the prefix is still contained in the word, cancels
+            //            if ([self.foundWord rangeOfString:self.foundPrefix].location != NSNotFound) {
+            //                return [self cancelAutoCompletion];
+            //            }
         }
         else {
             return [self cancelAutoCompletion];
         }
     }
     else {
-        return [self cancelAutoCompletion];
+        if (self.autoCompleteIsPersisting) {
+            _foundWord = word;
+            _autoCompleteIsPersisting = NO;
+        }
+        else {
+            return [self cancelAutoCompletion];
+        }
     }
     
     [self showAutoCompletionView:[self canShowAutoCompletion]];
@@ -1403,18 +1443,40 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
 
 - (void)acceptAutoCompletionWithString:(NSString *)string
 {
+    [self acceptAutoCompletionWithString:string keepPrefix:YES];
+}
+
+- (void)acceptAutoCompletionWithString:(NSString *)string keepPrefix:(BOOL)keepPrefix
+{
+    
+    if (self.autoCompleteShouldPersist) {
+        _autoCompleteIsPersisting = YES;
+    }
+    
     if (string.length == 0) {
         return;
     }
     
     SLKTextView *textView = self.textView;
     
-    NSRange range = NSMakeRange(self.foundPrefixRange.location+1, self.foundWord.length);
-    NSRange insertionRange = [textView slk_insertText:string inRange:range];
+    NSUInteger location = self.foundPrefixRange.location;
+    if (keepPrefix) {
+        location += self.foundPrefixRange.length;
+    }
     
+    NSUInteger length = self.foundWord.length;
+    if (!keepPrefix) {
+        length += self.foundPrefixRange.length;
+    }
+    
+    NSRange range = NSMakeRange(location, length);
+    
+    NSRange insertionRange = [textView slk_insertText:string inRange:range];
     textView.selectedRange = NSMakeRange(insertionRange.location, 0);
     
-    [self cancelAutoCompletion];
+    if (!self.autoCompleteShouldPersist) {
+        [self cancelAutoCompletion];
+    }
     
     [textView slk_scrollToCaretPositonAnimated:NO];
 }
