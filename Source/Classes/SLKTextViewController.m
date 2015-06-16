@@ -1498,9 +1498,11 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
     
     CGFloat viewHeight = show ? [self heightForAutoCompletionView] : 0.0;
     
-    if (self.autoCompletionViewHC.constant == viewHeight) {
-        return;
-    }
+    // // Commenting out because this prevented autocomplete from
+    // // reloading if height was unchanged between updates.
+    // if (self.autoCompletionViewHC.constant == viewHeight) {
+    //     return;
+    // }
     
     if (show) {
         // Reload the tableview before showing it
