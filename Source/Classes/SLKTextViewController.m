@@ -1334,15 +1334,13 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
     
     NSString *text = self.textView.text;
     
-    // No need to process for autocompletion if there is no text to process
-    if (text.length == 0) {
-        return [self cancelAutoCompletion];
-    }
-    
     if (self.autoCompleteIsPersisting) {
         _foundPrefix = @"";
         _foundPrefixRange = self.textView.selectedRange;
         return [self handleProcessedWord:@"" range:self.textView.selectedRange];
+    } else if (text.length == 0) {
+        // No need to process for autocompletion if there is no text to process
+        return [self cancelAutoCompletion];
     }
     
     NSRange range = NSMakeRange(0.0, 0.0);
@@ -1454,9 +1452,9 @@ NSString * const SLKKeyboardDidHideNotification =   @"SLKKeyboardDidHideNotifica
         _autoCompleteIsPersisting = YES;
     }
     
-    if (string.length == 0) {
-        return;
-    }
+//    if (string.length == 0) {
+//        return;
+//    }
     
     SLKTextView *textView = self.textView;
     
